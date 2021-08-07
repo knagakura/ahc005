@@ -42,11 +42,9 @@ const ll MOD = 1000000007;
 // const ll MOD = 998244353;
 const long double PI = acos(-1.0);
 
-/*
 const int dx[8] = {1, 0, -1, 0, 1, -1, -1, 1};
 const int dy[8] = {0, 1, 0, -1, 1, 1, -1, -1};
 const string dir = "DRUL";
-*/
 
 uint32_t XorShift(void) {
     static uint32_t x = 123456789;
@@ -76,9 +74,12 @@ struct MyTimer {
     }
 }aMyTimer;
 
+constexpr int maxN = 69;
 int N;
 int si, sj; // start grid
-int c[69][69];
+char field[maxN][maxN];
+int cnt[maxN][maxN];
+int surround[maxN][maxN];
 
 class Solver{
 public:
@@ -86,18 +87,75 @@ public:
         cin >> N;
         cin >> si >> sj;
         rep(i,N)rep(j,N){
-            cin >> c[i][j];
+            cin >> field[i][j];
         }
     }
 
     void init(){
-
+        rep(i,N)rep(j,N){
+            cnt[i][j] = 0;
+            surround[i][j] = 0;
+        }
+        calcSurrounds();
     }
 
     void ouput(){
+
     }
 
-    int randomSolve(){
+    void randomSolve(){
+    }
+
+    void dumpSurround(){
+        rep(i,N){
+            rep(j,N){
+                cerr << surround[i][j] << " ";
+            }
+            cerr << endl;
+        }
+    }
+
+private:
+    /*
+    ある座標に到達したときに、cnt盤面を更新する関数
+    */
+    void viewCalc(int i, int j) {
+        cnt[i][j]++;
+        rep(k,4){
+            int x = i + dx[k];
+            int y = j + dy[k];
+            while(isInField(x, y) && !isWall(x, y)) {
+                cnt[x][y]++;
+                x = x + dx[k];
+                y = y + dy[k];
+            }
+        }
+    }
+
+    bool isInField (int i,int j) {
+        return 0 <= i && i < N && 0 <= j && j < N;
+    };
+
+    bool isWall (int i,int j) {
+        return field[i][j] == '#';
+    };
+
+    void calcSurrounds(){
+        rep(i,N)rep(j,N){
+            surround[i][j] = _calcSurround(i, j);
+        }
+    }
+
+    int _calcSurround(int i, int j) {
+        int res = 0;
+        rep(k,4){
+            int ni = i + dx[k];
+            int nj = j + dy[k];
+            if(!isInField(ni, nj) || !isWall(ni,nj)) {
+                res++;
+            }
+        }
+        return res;
     }
 
 };
@@ -114,4 +172,9 @@ int main() {
     int itr = 0;
     while(aMyTimer.get() < TL/2){
     }
+    aSolver.ouput();
+
+    // dump
+    // aSolver.dumpSurround();
+
 }
