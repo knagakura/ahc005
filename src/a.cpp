@@ -82,6 +82,7 @@ int cnt[maxN][maxN];
 int surround[maxN][maxN];
 
 class Solver{
+    string ans;
 public:
     void input(){
         cin >> N;
