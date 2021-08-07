@@ -58,7 +58,7 @@ uint32_t XorShift(void) {
     return w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
 }
 
-constexpr double TL = 2.95;
+constexpr double TL = 2.7;
 long long CYCLES_PER_SEC = 2800000000;
 struct MyTimer {
     long long start;
@@ -291,11 +291,16 @@ private:
 
     int _calcSurround(int i, int j) {
         int res = 0;
+        if(isWall(i, j))return res;
         rep(k,4){
             int ni = i + dx[k];
             int nj = j + dy[k];
-            if(!isInField(ni, nj) || !isWall(ni,nj)) {
-                res++;
+            int mi = i + dx[(k+1)%4];
+            int mj = j + dy[(k+1)%4];
+            if(isInField(ni, nj) && !isWall(ni,nj)) {
+                if(isInField(mi, mj) && !isWall(mi,mj)) {
+                    res++;
+                }
             }
         }
         return res;
@@ -335,6 +340,6 @@ int main() {
     aSolver.ouput();
 
     // dump
-    // aSolver.dumpSurround();
+    aSolver.dumpSurround();
 
 }
