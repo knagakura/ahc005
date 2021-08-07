@@ -74,7 +74,8 @@ struct MyTimer {
     }
 }aMyTimer;
 
-constexpr int maxN = 69;
+
+constexpr int maxN = 100;
 int N;
 int si, sj; // start grid
 char field[maxN][maxN];
@@ -82,8 +83,10 @@ int cnt[maxN][maxN];
 int surround[maxN][maxN];
 
 class Solver{
-    string ans;
 public:
+    string ans;
+    set<pair<int,int>> movedFields;
+    int fieldSize;
     void input(){
         cin >> N;
         cin >> si >> sj;
@@ -96,15 +99,55 @@ public:
         rep(i,N)rep(j,N){
             cnt[i][j] = 0;
             surround[i][j] = 0;
+            if(!isWall(i,j))fieldSize++;
         }
         calcSurrounds();
     }
 
     void ouput(){
-
+        cout << ans << endl;
     }
 
     void randomSolve(){
+        // ansを更新するだけ
+        int x = si;
+        int y = sj;
+        movedFields.insert({x, y});
+        int preDirIdx = 0;
+        int itr = 0;
+        while(aMyTimer.get() < TL && movedFields.size() < fieldSize) {
+            itr++;
+            vector<int> kouhoDirIdxs;
+            bool isSurround = false;
+            rep(k,4){
+                int nx = x + dx[k];
+                int ny = y + dy[k];
+                if(isWall(nx, ny))continue;
+                if(!isInField(nx, ny))continue;
+                if(k == invDir(preDirIdx))continue;
+                if(getSurround(nx, ny) - getSurround(x, y) > 0) {
+                    move(x, y, k);
+                    preDirIdx = k;
+                    isSurround = true;
+                    break;
+                }
+                kouhoDirIdxs.push_back(k);
+            }
+            if(isSurround)continue;
+            int sz = kouhoDirIdxs.size();
+            if(sz == 0){
+                int dirIdx = invDir(preDirIdx);
+                move(x, y, dirIdx);
+                preDirIdx = dirIdx;
+                continue;
+            }
+            int dirIdx = kouhoDirIdxs[XorShift()%sz];
+            move(x, y, dirIdx);
+            preDirIdx = dirIdx;
+        }
+
+        // 帰る
+        dump(x, y);
     }
 
     void dumpSurround(){
@@ -159,6 +202,21 @@ private:
         return res;
     }
 
+    int getSurround(int i, int j){
+        return surround[i][j];
+    }
+    
+    void move(int &x, int &y, int dirIdx) {
+        x = x + dx[dirIdx];
+        y = y + dy[dirIdx];
+        movedFields.insert({x, y});
+        dump(x, y, dirIdx, dir[dirIdx]);
+        ans.push_back(dir[dirIdx]);
+    }
+
+    int invDir(int dirIdx) {
+        return ((dirIdx - 2)+4)%4;
+    }
 };
 
 
@@ -171,8 +229,10 @@ int main() {
 
     // write your own algorithm!!!!
     int itr = 0;
+    aSolver.randomSolve();
     while(aMyTimer.get() < TL/2){
     }
+    dump(si, sj, aSolver.movedFields);
     aSolver.ouput();
 
     // dump
