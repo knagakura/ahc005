@@ -80,7 +80,8 @@ int si, sj; // start grid
 char field[maxN][maxN];
 int cnt[maxN][maxN];
 int surround[maxN][maxN];
-
+string kosatenSaitan[1000][1000];
+int kosatenDist[1000][1000];
 int f(int i, int j){
     return i * N + j;
 }
@@ -114,6 +115,7 @@ public:
  
     void solve(int start) {
         for(int i = 0; i < N; ++i) cost[i] = inf;
+        for(int i = 0; i < N; ++i) prev[i] = -1;
 
         dump(start);
         priority_queue<pair<T, int>, vector<pair<T, int>>, greater<pair<T, int>>> pq;
@@ -169,6 +171,9 @@ public:
     set<pair<int,int>> movedFields;
     int fieldSize;
     Dijkstra<int> G;
+    vector<pair<int, int>> kosatens;
+    int kosatenCnt;
+
     void input(){
         cin >> N;
         cin >> si >> sj;
@@ -184,19 +189,9 @@ public:
             if(!isWall(i,j))fieldSize++;
         }
         calcSurrounds();
-
-        // Dijkstra Init
-        G.init(N*N, INF);
-        rep(i,N)rep(j,N){
-            if(isWall(i, j))continue;
-            rep(k,4){
-                int ni = i + dx[k];
-                int nj = j + dy[k];
-                if(isWall(ni, nj))continue;
-                if(not isInField(ni, nj))continue;
-                G.make_edge(f(i,j), f(ni,nj), field[ni][nj]-'0');
-            }
-        }
+        dijkstraInit();
+        kosatenInit();
+        kosatenCalc();
     }
 
     void ouput(){
@@ -259,6 +254,45 @@ public:
     }
 
 private:
+    void dijkstraInit(){
+        // Dijkstra Init
+        G.init(N*N, INF);
+        rep(i,N)rep(j,N){
+            if(isWall(i, j))continue;
+            rep(k,4){
+                int ni = i + dx[k];
+                int nj = j + dy[k];
+                if(isWall(ni, nj))continue;
+                if(not isInField(ni, nj))continue;
+                G.make_edge(f(i,j), f(ni,nj), field[ni][nj]-'0');
+            }
+        }
+    }
+    void kosatenInit(){
+        kosatens.emplace_back(si, sj);
+        rep(i,N)rep(j,N){
+            if(i == si && j == sj)continue;
+            if(isKosaten(i,j))kosatens.emplace_back(i, j);
+        }
+        kosatenCnt = kosatens.size();
+    }
+    void kosatenCalc(){
+        //
+        rep(i,kosatenCnt){
+            auto [sx, sy] = kosatens[i];
+            G.solve(f(sx, sy));
+            rep(j,kosatenCnt){
+                if(i == j)continue;
+                auto [tx, ty] = kosatens[j];
+                kosatenSaitan[i][j] =  G.get_path_string(f(tx, ty));
+                kosatenDist[i][j] = G.cost[f(tx, ty)];
+                dump(i,j,kosatenSaitan[i][j], kosatenDist[i][j]);
+            }
+        }
+    }
+    bool isKosaten(int x, int y) {
+        return getSurround(x, y) > 0;
+    }
     /*
     ある座標に到達したときに、cnt盤面を更新する関数
     */
@@ -339,13 +373,10 @@ int main() {
 
     // write your own algorithm!!!!
     int itr = 0;
-    aSolver.randomSolve();
-    while(aMyTimer.get() < TL/2){
-    }
+    // aSolver.randomSolve();
     dump(si, sj, aSolver.movedFields);
+    dump(aSolver.kosatenCnt);
+    dump(aMyTimer.get());
     aSolver.ouput();
-
-    // dump
-    // aSolver.dumpSurround();
 
 }
