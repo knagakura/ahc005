@@ -263,11 +263,14 @@ private:
     ある座標に到達したときに、cnt盤面を更新する関数
     */
     void viewCalc(int i, int j) {
+        if(getSurround(i,j) == 0)return;
         cnt[i][j]++;
+        movedFields.insert({i,j});
         rep(k,4){
             int x = i + dx[k];
             int y = j + dy[k];
             while(isInField(x, y) && !isWall(x, y)) {
+                movedFields.insert({x,y});
                 cnt[x][y]++;
                 x = x + dx[k];
                 y = y + dy[k];
@@ -314,8 +317,11 @@ private:
         x = x + dx[dirIdx];
         y = y + dy[dirIdx];
         movedFields.insert({x, y});
-        dump(x, y, dirIdx, dir[dirIdx]);
+        // dump(x, y, dirIdx, dir[dirIdx]);
         ans.push_back(dir[dirIdx]);
+        if(movedFields.find({x, y}) == movedFields.end()){
+            viewCalc(x, y);
+        }
     }
 
     int invDir(int dirIdx) {
@@ -340,6 +346,6 @@ int main() {
     aSolver.ouput();
 
     // dump
-    aSolver.dumpSurround();
+    // aSolver.dumpSurround();
 
 }
