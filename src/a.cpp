@@ -74,7 +74,6 @@ struct MyTimer {
     }
 }aMyTimer;
 
-
 constexpr int maxN = 100;
 int N;
 int si, sj; // start grid
@@ -82,11 +81,94 @@ char field[maxN][maxN];
 int cnt[maxN][maxN];
 int surround[maxN][maxN];
 
+int f(int i, int j){
+    return i * N + j;
+}
+
+pair<int, int> finv(int X){
+    return make_pair(X / N, X % N);
+}
+template<class T> class Dijkstra {
+public:
+    int N;
+    T inf;
+    vector<T> cost;
+    vector<int> prev;
+    vector<vector<pair<T, int>>> edge;
+
+    Dijkstra(){}
+    Dijkstra(const int _N, T _inf) : N(_N), inf(_inf),cost(_N), edge(_N), prev(_N,-1) {
+    }
+
+    void init(const int _N, T _inf) {
+        N = _N;
+        inf = _inf;
+        cost.resize(_N);
+        edge.resize(_N);
+        prev.assign(_N, -1);
+    }
+ 
+    void make_edge(int from, int to, T w) {
+        edge[from].push_back({ w,to });
+    }
+ 
+    void solve(int start) {
+        for(int i = 0; i < N; ++i) cost[i] = inf;
+
+        dump(start);
+        priority_queue<pair<T, int>, vector<pair<T, int>>, greater<pair<T, int>>> pq;
+        cost[start] = 0;
+        pq.push({ 0,start });
+ 
+        while (!pq.empty()) {
+            T v = pq.top().first;
+            int from = pq.top().second;
+            pq.pop();
+            for (auto u : edge[from]) {
+                T w = v + u.first;
+                int to = u.second;
+                if (w < cost[to]) {
+                    cost[to] = w;
+                    prev[to] = from;
+                    pq.push({ w,to });
+                }
+            }
+        }
+        return;
+    }
+
+    vector<int> get_path(int t){ //頂点tへの最短路
+        vector<int> path;
+        for(; t != -1;t=prev[t]){
+            path.push_back(t);
+        }
+        reverse(path.begin(), path.end());
+        return path;
+    }
+
+    string get_path_string(int t) {
+        vector<int> path = get_path(t);
+        int sz = path.size();
+        string pathString;
+        rep(i,sz-1){
+            auto [x, y] = finv(path[i]);
+            auto [nx, ny] = finv(path[i+1]);
+            rep(k,4){
+                if(nx-x == dx[k] && ny-y == dy[k]){
+                    pathString.push_back(dir[k]);
+                }
+            }
+        }
+        return pathString;
+    }
+};
+
 class Solver{
 public:
     string ans;
     set<pair<int,int>> movedFields;
     int fieldSize;
+    Dijkstra<int> G;
     void input(){
         cin >> N;
         cin >> si >> sj;
@@ -102,6 +184,19 @@ public:
             if(!isWall(i,j))fieldSize++;
         }
         calcSurrounds();
+
+        // Dijkstra Init
+        G.init(N*N, INF);
+        rep(i,N)rep(j,N){
+            if(isWall(i, j))continue;
+            rep(k,4){
+                int ni = i + dx[k];
+                int nj = j + dy[k];
+                if(isWall(ni, nj))continue;
+                if(not isInField(ni, nj))continue;
+                G.make_edge(f(i,j), f(ni,nj), field[ni][nj]-'0');
+            }
+        }
     }
 
     void ouput(){
@@ -115,7 +210,8 @@ public:
         movedFields.insert({x, y});
         int preDirIdx = 0;
         int itr = 0;
-        while(aMyTimer.get() < TL && movedFields.size() < fieldSize) {
+        while(aMyTimer.get() < TL) {
+            if(movedFields.size() == fieldSize)break;
             itr++;
             vector<int> kouhoDirIdxs;
             bool isSurround = false;
@@ -148,6 +244,9 @@ public:
 
         // 帰る
         dump(x, y);
+        G.solve(f(x, y));
+        string path = G.get_path_string(f(si, sj));
+        ans += path;
     }
 
     void dumpSurround(){
