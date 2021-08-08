@@ -74,14 +74,18 @@ struct MyTimer {
     }
 }aMyTimer;
 
+
 constexpr int maxN = 100;
 int N;
 int si, sj; // start grid
 char field[maxN][maxN];
 int cnt[maxN][maxN];
 int surround[maxN][maxN];
-string kosatenSaitan[1000][1000];
+// string kosatenSaitan[1000][1000];
 int kosatenDist[1000][1000];
+vector<pair<int, int>> kosatens;
+int kosatenCnt;
+
 int f(int i, int j){
     return i * N + j;
 }
@@ -117,7 +121,6 @@ public:
         for(int i = 0; i < N; ++i) cost[i] = inf;
         for(int i = 0; i < N; ++i) prev[i] = -1;
 
-        dump(start);
         priority_queue<pair<T, int>, vector<pair<T, int>>, greater<pair<T, int>>> pq;
         cost[start] = 0;
         pq.push({ 0,start });
@@ -164,15 +167,37 @@ public:
         return pathString;
     }
 };
-
+struct KosatenTour{
+    vector<int> seq;
+    vector<bool> used;
+    int cost;
+    KosatenTour(){
+        cost = 0;
+        used.assign(kosatenCnt, false);
+        seq.emplace_back(0);
+        used[0] = true;
+    }
+    void add2Seq(const int idx){
+        seq.emplace_back(idx);
+        used[idx] = true;
+        return;
+    }
+    void pushCard(const int idx){
+        int preidx = seq.back();
+        cost += kosatenDist[preidx][idx];
+        add2Seq(idx);
+    }
+    bool operator<(const KosatenTour& b) const{
+        return (*this).cost > b.cost;
+    }
+};
 class Solver{
 public:
     string ans;
     set<pair<int,int>> movedFields;
     int fieldSize;
     Dijkstra<int> G;
-    vector<pair<int, int>> kosatens;
-    int kosatenCnt;
+
 
     void input(){
         cin >> N;
@@ -238,12 +263,78 @@ public:
         }
 
         // 帰る
-        dump(x, y);
         G.solve(f(x, y));
         string path = G.get_path_string(f(si, sj));
         ans += path;
     }
 
+    void kosatenSolve(){
+        // rep(i,kosatenCnt-1){
+        //     ans += kosatenSaitan[i][i+1];
+        // }
+        // ans += kosatenSaitan[kosatenCnt-1][0];
+    }
+
+    void kosatenSolve(vector<int> &seq){
+        assert((int)seq.size() == kosatenCnt+1);
+        assert(seq.back() == 0);
+        rep(i,kosatenCnt){
+            cout << getKosatenSaitan(seq[i], seq[i+1]);
+        }
+        cout << '\n';
+    }
+
+    void chokudaiSearch(const int& chokudai_width = 1){
+        vector<priority_queue<KosatenTour>> ques(kosatenCnt+1);
+        ques[0].push(KosatenTour()); // デフォルトのやつを挿入 初期位置のみ入ってる
+        while(aMyTimer.get() < TL) {
+            dump(aMyTimer.get());
+            for(int depth = 0; depth < kosatenCnt-1; depth++){
+                if(aMyTimer.get() > TL)break;
+                auto &que = ques[depth];
+                auto &nxt_que = ques[depth + 1];
+                for(int i = 0; i < chokudai_width; i++){
+                    if(aMyTimer.get() > TL)break;
+                    if(que.empty())break;
+                    auto state = que.top(); que.pop();
+                    int from = state.seq.back(); // ここから出発 -> あらかじめbfsかなんかで近傍の20枚くらいを列挙しておこうStage内で -> できた
+                    int cnt = 0;
+                    for(int idx = 0; idx < kosatenCnt; idx++){
+                        if(cnt > 5)break;
+                        if(aMyTimer.get() > TL)break;
+                        if(not state.used[idx]){
+                            auto nxt_state = state;
+                            nxt_state.pushCard(idx);
+                            nxt_que.push(nxt_state);
+                            cnt++;
+                        }
+                    }
+                }
+            }
+            for(int depth = 0; depth < kosatenCnt-1; depth++){
+                if(ques[depth].size() > 5000){
+                    priority_queue<KosatenTour> tmp;
+                    while(tmp.size() < 1000){
+                        auto top = ques[depth].top();
+                        ques[depth].pop();
+                        tmp.push(top);
+                    }
+                    swap(tmp, ques[depth]);
+                }
+            }
+        }
+        assert(not ques[kosatenCnt-1].empty());
+        while(not ques[kosatenCnt-1].empty()){
+            auto q = ques[kosatenCnt-1].top();
+            ques[kosatenCnt-1].pop();
+            q.cost += kosatenDist[q.seq.back()][0];
+            q.seq.push_back(0);
+            ques.back().push(q);
+        }
+        KosatenTour res = ques.back().top();
+        dump(res.seq);
+        kosatenSolve(res.seq);
+    }
     void dumpSurround(){
         rep(i,N){
             rep(j,N){
@@ -284,11 +375,16 @@ private:
             rep(j,kosatenCnt){
                 if(i == j)continue;
                 auto [tx, ty] = kosatens[j];
-                kosatenSaitan[i][j] =  G.get_path_string(f(tx, ty));
+                // kosatenSaitan[i][j] =  G.get_path_string(f(tx, ty));
                 kosatenDist[i][j] = G.cost[f(tx, ty)];
-                dump(i,j,kosatenSaitan[i][j], kosatenDist[i][j]);
             }
         }
+    }
+    string getKosatenSaitan(int i, int j){
+        auto [sx, sy] = kosatens[i];
+        G.solve(f(sx, sy));
+        auto [tx, ty] = kosatens[j];
+        return G.get_path_string(f(tx, ty));
     }
     bool isKosaten(int x, int y) {
         return getSurround(x, y) > 0;
@@ -352,6 +448,8 @@ private:
         y = y + dy[dirIdx];
         movedFields.insert({x, y});
         // dump(x, y, dirIdx, dir[dirIdx]);
+
+
         ans.push_back(dir[dirIdx]);
         if(movedFields.find({x, y}) == movedFields.end()){
             viewCalc(x, y);
@@ -370,13 +468,13 @@ int main() {
     Solver aSolver;
     aSolver.input();
     aSolver.init();
+    dump("init", aMyTimer.get());
 
     // write your own algorithm!!!!
     int itr = 0;
-    // aSolver.randomSolve();
-    dump(si, sj, aSolver.movedFields);
-    dump(aSolver.kosatenCnt);
-    dump(aMyTimer.get());
+    // aSolver.kosatenSolve();
+    aSolver.chokudaiSearch();
+    dump("solve", aMyTimer.get());
     aSolver.ouput();
 
 }
